@@ -81,15 +81,19 @@ Claude Code / Cursor
 
 ### 1. send_bundle (eth_sendBundle)
 
+All param structs use `#[serde(rename_all = "camelCase")]` to match the Titan API's camelCase JSON field names.
+
 ```rust
+#[serde(rename_all = "camelCase")]
 struct SendBundleParams {
-    txs: Vec<String>,                          // required, signed tx hex
-    block_number: Option<String>,              // optional, hex block number
+    txs: Vec<String>,                          // required, signed tx hex (can be empty for cancellations)
+    block_number: Option<String>,              // optional, hex block number. Omit or "0x0" → defaults to current block
     reverting_tx_hashes: Option<Vec<String>>,
     dropping_tx_hashes: Option<Vec<String>>,
     replacement_uuid: Option<String>,
     refund_percent: Option<u64>,               // 0-99
     refund_recipient: Option<String>,          // address
+    refund_index: Option<u64>,                 // index of tx whose reward is used for refund calc (default: last tx)
     replacement_seq_number: Option<u64>,
     min_timestamp: Option<u64>,
 }
@@ -113,6 +117,7 @@ struct GetBundleStatsParams {
 }
 // Output: { status, builderPayment, builderPaymentWhenIncluded, error }
 // Note: uses stats.titanbuilder.xyz, not the main RPC endpoint
+// Note: bundle trace is ready ~5 minutes after submission. Rate limit: 50 req/sec.
 ```
 
 ### 4. send_raw_transaction (eth_sendRawTransaction)
@@ -146,6 +151,9 @@ struct SendBlobsParams {
 | Env Var | Description | Default |
 |---|---|---|
 | `TITAN_RPC_URL` | Titan Builder RPC endpoint | `https://rpc.titanbuilder.xyz` |
+| `TITAN_TIMEOUT_MS` | HTTP request timeout in milliseconds | `10000` (10s) |
+
+> `TITAN_RPC_URL` does NOT affect the stats endpoint. `titan_getBundleStats` always uses `https://stats.titanbuilder.xyz`.
 
 ### Regional Endpoints
 
@@ -214,3 +222,4 @@ CI workflow (`.github/workflows/release.yml`):
 - No HTTP/SSE transport (stdio only for v0.1)
 - No auxiliary tools beyond the 5 core API endpoints
 - No retry logic or rate limiting
+- No logging beyond stderr (may add `tracing` in future versions)
