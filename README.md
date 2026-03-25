@@ -29,13 +29,9 @@ The first MCP (Model Context Protocol) server for an Ethereum block builder. Ena
 
 ## Architecture
 
-```
-┌─────────────────┐     stdio      ┌──────────────────┐     HTTPS     ┌─────────────────────┐
-│  Claude Code /   │◄──────────────►│  titan-builder-   │◄────────────►│  Titan Builder RPC   │
-│  Cursor / AI     │   MCP JSON     │  mcp              │   JSON-RPC   │  us.rpc.titanbuilder │
-│  Agent           │                │                    │              │  .xyz                │
-└─────────────────┘                └──────────────────┘              └─────────────────────┘
-```
+<p align="center">
+  <img src="assets/architecture.png" alt="titan-builder-mcp architecture" width="800"/>
+</p>
 
 ## Quick Start
 
