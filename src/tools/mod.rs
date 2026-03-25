@@ -88,9 +88,12 @@ impl TitanMcpServer {
             .await;
 
         match result {
-            Ok(value) => Ok(CallToolResult::success(vec![Content::text(
-                serde_json::to_string_pretty(&value).unwrap_or_else(|_| value.to_string()),
-            )])),
+            Ok(value) => {
+                let pretty = serde_json::to_string_pretty(&value).unwrap_or_else(|_| value.to_string());
+                let analysis = get_bundle_stats::analyze_bundle_status(&value);
+                let output = format!("## Raw Response\n{}\n\n{}", pretty, analysis);
+                Ok(CallToolResult::success(vec![Content::text(output)]))
+            }
             Err(e) => Ok(CallToolResult::error(vec![Content::text(e)])),
         }
     }
