@@ -1,5 +1,18 @@
 # titan-builder-mcp
 
+```
+  _   _ _                   _           _ _     _
+ | |_(_) |_ __ _ _ __      | |__  _   _(_) | __| | ___ _ __
+ | __| | __/ _` | '_ \ ____| '_ \| | | | | |/ _` |/ _ \ '__|
+ | |_| | || (_| | | | |____| |_) | |_| | | | (_| |  __/ |
+  \__|_|\__\__,_|_| |_|    |_.__/ \__,_|_|_|\__,_|\___|_|
+                                           _ __ ___   ___ _ __
+                                          | '_ ` _ \ / __| '_ \
+                                          | | | | | | (__| |_) |
+                                          |_| |_| |_|\___| .__/
+                                                         |_|
+```
+
 [![CI](https://github.com/VPC-byte/titan-builder-mcp/actions/workflows/release.yml/badge.svg)](https://github.com/VPC-byte/titan-builder-mcp/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -9,8 +22,8 @@ The first MCP (Model Context Protocol) server for an Ethereum block builder. Ena
 
 ## Highlights
 
+- **Enhanced Bundle Tracing** — AI-ready diagnostic analysis on top of `titan_getBundleStats` — [see below](#enhanced-bundle-tracing)
 - **5 MCP tools** mapping to Titan Builder's complete API surface
-- **Enhanced Bundle Tracing** — AI-ready diagnostic analysis on top of `titan_getBundleStats`
 - **Single binary** — zero runtime dependencies, compiled Rust
 - **Regional endpoints** — US, EU, Asia for minimal latency
 
@@ -48,38 +61,80 @@ cargo install titan-builder-mcp
 **Use:**
 Once configured, your AI agent can send bundles, check bundle status, submit transactions, and debug failures through natural language.
 
+## Enhanced Bundle Tracing
+
+**The core feature.** When your bundle fails, you shouldn't have to guess why.
+
+Titan Builder provides [Bundle Tracing](https://docs.titanbuilder.xyz) via `titan_getBundleStats` — returning status codes, builder payment data, and error details. Our MCP server adds an **AI-ready diagnostic layer** on top: root cause analysis, actionable fix suggestions, and payment flags.
+
+### Without Enhanced Bundle Tracing
+
+Raw API response — you see *what* happened, but not *why* or *what to do*:
+
+```json
+{
+  "status": "SimulationFail",
+  "builderPayment": "0",
+  "builderPaymentWhenIncluded": "0",
+  "error": "BundleRevert. Reverting Hash: 0xa1b2c3d4e5f6...789"
+}
+```
+
+### With Enhanced Bundle Tracing
+
+Same response + structured diagnostic analysis:
+
+```
+## Raw Response
+{
+  "status": "SimulationFail",
+  "builderPayment": "0",
+  "builderPaymentWhenIncluded": "0",
+  "error": "BundleRevert. Reverting Hash: 0xa1b2c3d4e5f6...789"
+}
+
+## Analysis
+Status: SimulationFail
+Root cause: Transaction 0xa1b2c3d4e5f6...789 reverted during top-of-block simulation.
+
+Suggestions:
+- Add 0xa1b2c3d4e5f6...789 to revertingTxHashes if this revert is acceptable
+- Verify the transaction succeeds via estimateGas against current state
+- Ensure builder payment (post-bundle balance - pre-bundle balance) is > 0
+```
+
+### What it analyzes
+
+| Capability | Description |
+|---|---|
+| **Root cause identification** | Maps each of 7 bundle statuses to a human-readable explanation |
+| **Actionable suggestions** | Specific steps to fix the issue — not generic advice |
+| **Payment analysis** | Flags when `builderPayment` is 0 (your bundle pays nothing to the builder) |
+| **Revert detection** | Extracts reverting transaction hashes from error messages and suggests adding them to `revertingTxHashes` |
+
+This is pure analysis — no additional API calls. It runs entirely on the response data from `titan_getBundleStats`.
+
 ## Tools
 
 | Tool | Titan API | Description |
 |---|---|---|
 | `send_bundle` | `eth_sendBundle` | Send an atomic bundle of signed transactions |
 | `cancel_bundle` | `eth_cancelBundle` | Cancel a bundle by replacement UUID |
-| `get_bundle_stats` | `titan_getBundleStats` | Query bundle status with diagnostic analysis |
+| `get_bundle_stats` | `titan_getBundleStats` | Query bundle status **with diagnostic analysis** |
 | `send_raw_transaction` | `eth_sendRawTransaction` | Submit a signed transaction via private mempool |
 | `send_blobs` | `eth_sendBlobs` | Send blob transaction permutations for optimal inclusion |
 
-## Enhanced Bundle Tracing
-
-The `get_bundle_stats` tool goes beyond raw API responses. It returns the original JSON-RPC result plus a structured diagnostic analysis:
-
-- **Root cause identification** — explains why a bundle was or wasn't included
-- **Actionable suggestions** — specific steps to fix the issue
-- **Payment analysis** — flags zero builder payment issues
-- **Revert detection** — extracts reverting transaction hashes from error messages
-
-This complements Titan Builder's [Bundle Tracing](https://docs.titanbuilder.xyz) feature with AI-ready diagnostics.
-
 ## Bundle Status Reference
 
-| Status | Meaning |
-|---|---|
-| `Received` | Bundle received but arrived too late for the pool |
-| `Invalid` | Malformed bundle (bad RLP, wrong block number, mined nonces, wrong chain ID) |
-| `SimulationFail` | Transaction reverted or builder payment ≤ 0 during top-of-block simulation |
-| `SimulationPass` | Passed simulation but submitted too late for inclusion |
-| `ExcludedFromBlock` | Valid but not selected — usually insufficient bribe |
-| `IncludedInBlock` | In a candidate block but another algorithm produced a more valuable block |
-| `Submitted` | Included in a block submitted to a relay |
+| Status | Meaning | Diagnostic |
+|---|---|---|
+| `Received` | Arrived too late for the pool | Submit earlier, use regional endpoint |
+| `Invalid` | Malformed bundle | Check RLP, chain ID, nonces, block number |
+| `SimulationFail` | Revert or zero builder payment | Fix reverting tx or increase priority fee |
+| `SimulationPass` | Passed but too late | Submit earlier in the slot |
+| `ExcludedFromBlock` | Insufficient bribe (99% of cases) | Increase priority fee |
+| `IncludedInBlock` | Lost to a more valuable block | Increase bribe |
+| `Submitted` | Success — submitted to relay | Monitor for on-chain inclusion |
 
 ## Configuration
 
