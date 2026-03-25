@@ -9,7 +9,7 @@ use rmcp::{
     ErrorData as McpError,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::*,
-    schemars, tool, tool_router, tool_handler,
+    tool, tool_router, tool_handler,
 };
 
 use crate::config::{Config, STATS_URL};
