@@ -93,7 +93,6 @@ struct SendBundleParams {
     replacement_uuid: Option<String>,
     refund_percent: Option<u64>,               // 0-99
     refund_recipient: Option<String>,          // address
-    refund_index: Option<u64>,                 // index of tx whose reward is used for refund calc (default: last tx)
     replacement_seq_number: Option<u64>,
     min_timestamp: Option<u64>,
 }
